@@ -1,0 +1,32 @@
+{
+  "name": "mdrupal",
+  "version": "0.0.0",
+  "description": "Provides a Drupal friendly wrapper for Mithril.js m.request function.",
+  "main": "build.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swim/mdrupal"
+  },
+  "keywords": [
+    "Mithril",
+    "JS",
+    "Drupal",
+    "REST",
+    "Front",
+    "end",
+    "abstraction"
+  ],
+  "author": "Swim",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/swim/mdrupal/issues"
+  },
+  "devDependencies": {
+    "uglify-js": "~2.4.24",
+    "watchify": "~3.4.0",
+    "browserify": "~11.1.0"
+  }
+}
