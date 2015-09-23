@@ -1,5 +1,5 @@
 #### About
-mDrupal provides integration between Drupal Services and RESTWS modules. mDrupal aims to be a lite weight solution for using Mithril.js as a front end framework with Drupal. mDrupal is less than 5kb uncompressed.
+mDrupal provides a Drupal friendly wrapper for Mithril.js's m.request function. mDrupal aims to be a lite weight solution for using Mithril.js as a front end framework with Drupal. mDrupal is less than 5kb uncompressed.
 
 #### Requirements
  - Mithril
