@@ -6,7 +6,7 @@
  */
 
 var gulp = require('gulp');
-var rename = require('gulp-rename');
+// var rename = require('gulp-rename');
 var sourcemaps = require('gulp-sourcemaps');
 var source = require('vinyl-source-stream');
 var buffer = require('vinyl-buffer');
