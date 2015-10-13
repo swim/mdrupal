@@ -4,30 +4,16 @@
  * build.js
  */
 
-// Expose user and config info.
-// window.Drupal = require('./src/common.js');
-
-// mdrupal core modules.
-/*var mdrupal = require('./src/core/request.js');
-mdrupal.core = {
-  system: require('./src/core/system.js')
-}
-
-// @todo, bulkify module requires.
-mdrupal.modules = {
-  services: require('./src/modules/services/services.js'),
-}*/
-
 'use strict';
 
 var mdrupal = {
   request: require('./core/request.js'),
-  services: require('./core/services.js')
+  queue: require('./core/queue.js')
 };
 
 module.exports = mdrupal;
 
-},{"./core/request.js":2,"./core/services.js":3}],2:[function(require,module,exports){
+},{"./core/queue.js":4,"./core/request.js":5}],2:[function(require,module,exports){
 /**
  * @file
  * request.js
@@ -48,30 +34,22 @@ var Request = (function () {
     this.response = [];
     this.cache = [];
 
-    // Defaults
+    // Default options
     this.redrawTimeout = options.redrawTimeout ? options.redrawTimeout : 0;
     this.redrawPerQueue = options.redrawPerQueue ? options.redrawPerQueue : false;
-    this.basePath = options.basePath ? options.basePath : '/drupal';
+    this.basePath = options.basePath ? options.basePath : '';
 
-    this.params(options);
+    // Request params
+    this.options = options.data;
+    this.options.url = this.basePath + this.options.url;
+
+    this.params();
   }
 
   _createClass(Request, [{
     key: 'params',
-    value: function params(options) {
-      this.options = options.data;
-      this.options.url = this.basePath + this.options.url;
-
+    value: function params() {
       this.process();
-    }
-  }, {
-    key: 'queue',
-    value: function queue(options) {
-      for (var i = 0; i < options.length; i++) {
-        this.params({ data: options[i] });
-      }
-
-      return this.response;
     }
   }, {
     key: 'process',
@@ -79,8 +57,6 @@ var Request = (function () {
       var index = this.cacheIndex(this.options.url, this.options.data);
 
       if (!this.cache[index]) {
-        this.cache[index] = [];
-
         var completed = m.prop(false);
         var complete = (function (value) {
           completed(true);
@@ -108,20 +84,13 @@ var Request = (function () {
         };
       }
 
-      this.response.push(this.cache[index]);
+      this.response = this.cache[index];
     }
   }, {
     key: 'cacheIndex',
     value: function cacheIndex(url, data) {
       return JSON.stringify({ url: url, query: data });
     }
-
-    /**
-     * @todo, process per queue group?
-     */
-  }, {
-    key: 'processQueue',
-    value: function processQueue() {}
   }]);
 
   return Request;
@@ -132,12 +101,13 @@ module.exports = Request;
 },{}],3:[function(require,module,exports){
 /**
  * @file
- * services.js
+ * rest.js
  *
- * Services handling for mdrupal; extends request
- * functionality.
+ * Format request params for Drupal REST to parse.
  *
- * Please see https://www.drupal.org/project/services.
+ * @todo, allow option to set auth type used.
+ * @todo, check to ensure config is not already set.
+ * @todo, pass format type as option.
  */
 'use strict';
 
@@ -155,28 +125,95 @@ var _request = require('./request');
 
 var _request2 = _interopRequireDefault(_request);
 
-var Services = (function (_Request) {
-  _inherits(Services, _Request);
+var Rest = (function (_Request) {
+  _inherits(Rest, _Request);
 
-  function Services() {
-    _classCallCheck(this, Services);
+  function Rest() {
+    _classCallCheck(this, Rest);
 
-    _get(Object.getPrototypeOf(Services.prototype), 'constructor', this).apply(this, arguments);
+    _get(Object.getPrototypeOf(Rest.prototype), 'constructor', this).apply(this, arguments);
   }
 
-  _createClass(Services, [{
-    key: 'process',
-    value: function process() {
-      // var options = super.process();
+  _createClass(Rest, [{
+    key: 'params',
+    value: function params() {
+      // Set format type.
+      this.options.url += '?_format=json';
+
+      // Set basic HTTP auth.
+      this.options.config = function (xhr) {
+        xhr.setRequestHeader('Authorization', '');
+      };
+
+      _get(Object.getPrototypeOf(Rest.prototype), 'process', this).call(this);
     }
   }]);
 
-  return Services;
+  return Rest;
 })(_request2['default']);
 
-module.exports = Services;
+module.exports = Rest;
 
-},{"./request":2}]},{},[1])(1)
+},{"./request":2}],4:[function(require,module,exports){
+/**
+ * @file
+ * queue.js
+ *
+ * Provides util functionality for queuing requests.
+ *
+ * @todo, support easy entity loading.
+ * @todo, support additional params passed.
+ */
+'use strict';
+
+var request = require('./request.js');
+
+var queue = (function () {
+  var vm = {};
+
+  vm.queue = function (options) {
+    var response = [];
+
+    for (var i = 0; i < options.request.length; i++) {
+      response.push(request(options.request[i]));
+    }
+
+    return response;
+  };
+
+  return vm;
+})();
+
+module.exports = queue.queue;
+
+},{"./request.js":5}],5:[function(require,module,exports){
+/**
+ * @file
+ * request.js
+ *
+ * Abstracts the request class.
+ */
+'use strict';
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _classRest = require('./class/rest');
+
+var _classRest2 = _interopRequireDefault(_classRest);
+
+var request = (function () {
+  var vm = {};
+
+  vm.request = function (params) {
+    return new _classRest2['default']({ data: params }).response;
+  };
+
+  return vm;
+})();
+
+module.exports = request.request;
+
+},{"./class/rest":3}]},{},[1])(1)
 });
 
 
