@@ -27,6 +27,13 @@
   "devDependencies": {
     "uglify-js": "~2.4.24",
     "watchify": "~3.4.0",
-    "browserify": "~11.1.0"
+    "browserify": "~11.2.0",
+    "gulp-babel": "~5.2.1",
+    "vinyl-source-stream": "~1.1.0",
+    "gulp-sourcemaps": "~1.6.0",
+    "vinyl-buffer": "~1.0.0",
+    "gulp": "~3.9.0",
+    "babelify": "~6.3.0",
+    "lodash.assign": "~3.2.0"
   }
 }

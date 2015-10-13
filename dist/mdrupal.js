@@ -1,25 +1,183 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mdrupal = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-window.Drupal=require("./src/common.js");var mdrupal=require("./src/core/request.js");mdrupal.core={system:require("./src/core/system.js")},mdrupal.modules={services:require("./src/modules/services/services.js")},module.exports=mdrupal;
-},{"./src/common.js":2,"./src/core/request.js":4,"./src/core/system.js":5,"./src/modules/services/services.js":6}],2:[function(require,module,exports){
-var config=require("./config.js"),Drupal={user:{uid:0,name:"Anonymous",roles:{1:"anonymous user"}},config:{base_path:config.base_path,service_path:config.service_path,file_path:config.file_path},ready:m.prop(!1),token:!1};module.exports=Drupal;
+/**
+ * @file
+ * build.js
+ */
 
-},{"./config.js":3}],3:[function(require,module,exports){
-var config={};config.debug=!0,config.base_path="http://mdrupal.dev/drupal",config.file_path="sites/default/files/",config.service_path="/app",module.exports=config;
+// Expose user and config info.
+// window.Drupal = require('./src/common.js');
 
-},{}],4:[function(require,module,exports){
-var system=require("./system.js"),request=function(){var e={cache:{},completed:m.prop(!1)};return e.request=function(t){var r=system.invoke(this.modules,"request");return r.call(this,e,t)},e.process=function(t){var r={url:t.data.url,query:t.data.data};if(r=JSON.stringify(r),!e.cache[r]){var u=function(e){return Drupal.debug&&console.log(e),e};e.completed(!1);var a=function(t){return e.completed(!0),delete e.cache[r],t};t.data=e.build(t.data),e.cache[r]=m.request(t.data).then(a,u)}return e.cache[r]},e.build=function(e){return e.config||(e.config=function(e){e.setRequestHeader("X-CSRF-Token",Drupal.token),e.setRequestHeader("Content-Type","application/json")}),e.url=Drupal.config.base_path+e.url,e},e}();module.exports=request;
+// mdrupal core modules.
+/*var mdrupal = require('./src/core/request.js');
+mdrupal.core = {
+  system: require('./src/core/system.js')
+}
 
-},{"./system.js":5}],5:[function(require,module,exports){
-var system=function(){var e={cache:{}};return e.invoke=function(r,a){var c="";for(var n in r){var t=n+a;e.cache[t]?c=e.cache[t]:r[n][a]&&(e.cache[t]=r[n][a],c=r[n][a])}return c},e.file_path=function(e){var r=Drupal.config.base_path;return e.indexOf("public://")>=0&&(e=e.replace("public://",Drupal.config.file_path)),r+="/"+e},e.clean_url=function(e){var r=!1;return e&&(r=e.toLowerCase().replace(/[^\w ]+/g,"").replace(/ +/g,"-")),r},e}();module.exports=system;
+// @todo, bulkify module requires.
+mdrupal.modules = {
+  services: require('./src/modules/services/services.js'),
+}*/
 
-},{}],6:[function(require,module,exports){
-var services=function(){var r={user:require("./user.service.js"),system:require("./system.service.js")};return r.token=function(e){return e.process(r.system.token({data:{method:"GET",url:"/?q=services/session/token",background:!0}}))},r.connect=function(e){return e.process(r.system.connect({data:{method:"POST",url:Drupal.config.service_path+"/system/connect",background:!0}}))},r.request=function(e,n){return n.query&&(n.data.url+=r.param(n.query)),Drupal.ready()?e.process(n):r.token(e).then(function(t){return r.connect(e).then(function(){return e.process(n)})})},r.param=function(e){var n="",t=Object.keys(e);r.parameters=function(r,e){var n="";for(var t in e)n+="&"+r+"["+t+"]="+e[t];return n},r.filters=function(r,e){var n="";for(var t in e)n+="&"+t+"="+e[t];return n};for(var s=0;s<t.length;s++){var u=t[s],o=e[u];o&&(n+=r[u](u,o))}return n},r}();module.exports=services;
+'use strict';
 
-},{"./system.service.js":7,"./user.service.js":8}],7:[function(require,module,exports){
-var system={};system.connect=function(e){return e.data.config=function(e){e.setRequestHeader("X-CSRF-Token",Drupal.token),e.setRequestHeader("Content-Type","application/json")},e.data.unwrapSuccess=function(e){Drupal.sessid=e.sessid,Drupal.session_name=e.session_name,Drupal.user=e.user,Drupal.ready(!0)},e.data.unwrapError=function(e){return Drupal.ready(!1),e},e},system.token=function(e){return e.data.extract=function(e){var n=e.responseText;return 200==e.status&&(n=JSON.stringify(e.responseText)),n},e.data.unwrapSuccess=function(e){return Drupal.token=e,e},e},module.exports=system;
+var mdrupal = {
+  request: require('./core/request.js'),
+  services: require('./core/services.js')
+};
 
-},{}],8:[function(require,module,exports){
-var user={};user.logout=function(e){return e.data.config=function(e){e.setRequestHeader("X-CSRF-Token",Drupal.token),e.setRequestHeader("Content-Type","application/json")},e},user.register=function(e){return e.data.config=function(e){e.setRequestHeader("X-CSRF-Token",Drupal.token),e.setRequestHeader("Content-Type","application/json")},e},user.login=function(e){return e.data.url=Drupal.config.service_path+"/user/login",e.data.config=function(e){e.setRequestHeader("X-CSRF-Token",Drupal.token),e.setRequestHeader("Content-Type","application/json")},e.data.unwrapSuccess=function(e){return Drupal.sessid=e.sessid,Drupal.session_name=e.session_name,Drupal.user=e.user,Drupal.token=e.token,e},e.data.unwrapError=function(e){return e},e},module.exports=user;
+module.exports = mdrupal;
 
-},{}]},{},[1])(1)
+},{"./core/request.js":2,"./core/services.js":3}],2:[function(require,module,exports){
+/**
+ * @file
+ * request.js
+ *
+ * m.request class wrapper for Drupal requests.
+ */
+
+'use strict';
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var Request = (function () {
+  function Request(options) {
+    _classCallCheck(this, Request);
+
+    this.response = [];
+    this.cache = [];
+
+    // Defaults
+    this.redrawTimeout = options.redrawTimeout ? options.redrawTimeout : 0;
+    this.redrawPerQueue = options.redrawPerQueue ? options.redrawPerQueue : false;
+    this.basePath = options.basePath ? options.basePath : '/drupal';
+
+    this.params(options);
+  }
+
+  _createClass(Request, [{
+    key: 'params',
+    value: function params(options) {
+      this.options = options.data;
+      this.options.url = this.basePath + this.options.url;
+
+      this.process();
+    }
+  }, {
+    key: 'queue',
+    value: function queue(options) {
+      for (var i = 0; i < options.length; i++) {
+        this.params({ data: options[i] });
+      }
+
+      return this.response;
+    }
+  }, {
+    key: 'process',
+    value: function process() {
+      var index = this.cacheIndex(this.options.url, this.options.data);
+
+      if (!this.cache[index]) {
+        this.cache[index] = [];
+
+        var completed = m.prop(false);
+        var complete = (function (value) {
+          completed(true);
+
+          delete this.cache[index];
+          return value;
+        }).bind(this);
+
+        var background = this.options.background ? true : false;
+        var timeout = this.redrawTimeout;
+
+        this.cache[index] = {
+          data: m.request(this.options).then(complete, complete).then(function (value) {
+            if (background) {
+              // (virtual) DOM renders too quick.
+              // Set minimum wait for redraw time.
+              setTimeout(function () {
+                m.redraw();
+              }, timeout);
+            }
+
+            return value;
+          }),
+          status: completed
+        };
+      }
+
+      this.response.push(this.cache[index]);
+    }
+  }, {
+    key: 'cacheIndex',
+    value: function cacheIndex(url, data) {
+      return JSON.stringify({ url: url, query: data });
+    }
+
+    /**
+     * @todo, process per queue group?
+     */
+  }, {
+    key: 'processQueue',
+    value: function processQueue() {}
+  }]);
+
+  return Request;
+})();
+
+module.exports = Request;
+
+},{}],3:[function(require,module,exports){
+/**
+ * @file
+ * services.js
+ *
+ * Services handling for mdrupal; extends request
+ * functionality.
+ *
+ * Please see https://www.drupal.org/project/services.
+ */
+'use strict';
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _request = require('./request');
+
+var _request2 = _interopRequireDefault(_request);
+
+var Services = (function (_Request) {
+  _inherits(Services, _Request);
+
+  function Services() {
+    _classCallCheck(this, Services);
+
+    _get(Object.getPrototypeOf(Services.prototype), 'constructor', this).apply(this, arguments);
+  }
+
+  _createClass(Services, [{
+    key: 'process',
+    value: function process() {
+      // var options = super.process();
+    }
+  }]);
+
+  return Services;
+})(_request2['default']);
+
+module.exports = Services;
+
+},{"./request":2}]},{},[1])(1)
 });
+
+
+//# sourceMappingURL=mdrupal.js.map
