@@ -7,6 +7,9 @@
 'use strict';
 
 var mdrupal = {
+  user: {
+    token: m.prop(false)
+  },
   request: require('./core/request.js'),
   queue: require('./core/queue.js')
 };
@@ -19,6 +22,9 @@ module.exports = mdrupal;
  * request.js
  *
  * m.request class wrapper for Drupal requests.
+ *
+ * @todo, support views; paging etc.
+ * @todo, implement another cache system outside of process with settings defined by request.
  */
 
 'use strict';
@@ -34,27 +40,28 @@ var Request = (function () {
     this.response = [];
     this.cache = [];
 
-    // Default options
-    this.redrawTimeout = options.redrawTimeout ? options.redrawTimeout : 0;
-    this.redrawPerQueue = options.redrawPerQueue ? options.redrawPerQueue : false;
-    this.basePath = options.basePath ? options.basePath : '';
+    // Default settings
+    this.settings = options.settings ? options.settings : {};
+    this.settings.redrawTimeout = options.settings.redrawTimeout ? options.settings.redrawTimeout : 0;
+    this.settings.redrawPerQueue = options.settings.redrawPerQueue ? options.settings.redrawPerQueue : false;
+    this.settings.basePath = options.settings.basePath ? options.settings.basePath : '';
 
     // Request params
-    this.options = options.data;
-    this.options.url = this.basePath + this.options.url;
+    this.params = options.data;
+    this.params.url = this.settings.basePath + this.params.url;
 
-    this.params();
+    this.init();
   }
 
   _createClass(Request, [{
-    key: 'params',
-    value: function params() {
+    key: 'init',
+    value: function init() {
       this.process();
     }
   }, {
     key: 'process',
     value: function process() {
-      var index = this.cacheIndex(this.options.url, this.options.data);
+      var index = this.cacheIndex(this.params.url, this.params.data);
 
       if (!this.cache[index]) {
         var completed = m.prop(false);
@@ -65,11 +72,11 @@ var Request = (function () {
           return value;
         }).bind(this);
 
-        var background = this.options.background ? true : false;
-        var timeout = this.redrawTimeout;
+        var background = this.params.background ? true : false;
+        var timeout = this.settings.redrawTimeout;
 
         this.cache[index] = {
-          data: m.request(this.options).then(complete, complete).then(function (value) {
+          data: m.request(this.params).then(complete, complete).then(function (value) {
             if (background) {
               // (virtual) DOM renders too quick.
               // Set minimum wait for redraw time.
@@ -107,7 +114,6 @@ module.exports = Request;
  *
  * @todo, allow option to set auth type used.
  * @todo, check to ensure config is not already set.
- * @todo, pass format type as option.
  */
 'use strict';
 
@@ -135,13 +141,14 @@ var Rest = (function (_Request) {
   }
 
   _createClass(Rest, [{
-    key: 'params',
-    value: function params() {
-      // Set format type.
-      this.options.url += '?_format=json';
+    key: 'init',
+    value: function init() {
+      // Set REST defaults
+      var format = this.settings.format ? this.settings.format : 'json';
+      this.params.url += '?_format=' + format;
 
       // Set basic HTTP auth.
-      this.options.config = function (xhr) {
+      this.params.config = function (xhr) {
         xhr.setRequestHeader('Authorization', '');
       };
 
@@ -161,8 +168,8 @@ module.exports = Rest;
  *
  * Provides util functionality for queuing requests.
  *
- * @todo, support easy entity loading.
- * @todo, support additional params passed.
+ * @todo, provide easy entity loading; prefil values.
+ * @todo, support per request options; currently per queue.
  */
 'use strict';
 
@@ -171,11 +178,11 @@ var request = require('./request.js');
 var queue = (function () {
   var vm = {};
 
-  vm.queue = function (options) {
+  vm.queue = function (requests, options) {
     var response = [];
 
-    for (var i = 0; i < options.request.length; i++) {
-      response.push(request(options.request[i]));
+    for (var i = 0; i < requests.length; i++) {
+      response.push(request(requests[i], options));
     }
 
     return response;
@@ -191,7 +198,7 @@ module.exports = queue.queue;
  * @file
  * request.js
  *
- * Abstracts the request class.
+ * Abstracts the request response.
  */
 'use strict';
 
@@ -202,10 +209,42 @@ var _classRest = require('./class/rest');
 var _classRest2 = _interopRequireDefault(_classRest);
 
 var request = (function () {
-  var vm = {};
+  var vm = {
+    lock: m.prop(false)
+  };
 
-  vm.request = function (params) {
-    return new _classRest2['default']({ data: params }).response;
+  vm.request = function (request, options) {
+    var params = {
+      data: request,
+      settings: options ? options : {}
+    };
+
+    // check for CSRF token; otherwise request one.
+    if (!vm.lock() && !mdrupal.user.token()) {
+      vm.lock(true);
+
+      new _classRest2['default']({
+        data: {
+          method: 'GET',
+          url: '/rest/session/token',
+          extract: function extract(xhr) {
+            var token = xhr.responseText;
+
+            if (xhr.status == 200) {
+              token = JSON.stringify(xhr.responseText);
+            }
+
+            // Set CSRF token.
+            return mdrupal.user.token(token);
+          }
+        },
+        settings: {
+          format: ''
+        }
+      });
+    }
+
+    return new _classRest2['default'](params).response;
   };
 
   return vm;
