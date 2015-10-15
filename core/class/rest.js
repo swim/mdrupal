@@ -6,17 +6,17 @@
  *
  * @todo, allow option to set auth type used.
  * @todo, check to ensure config is not already set.
- * @todo, pass format type as option.
  */
 import Request from './request';
 
 class Rest extends Request {
-  params() {
-    // Set format type.
-    this.options.url += '?_format=json';
+  init() {
+    // Set REST defaults
+    var format = this.settings.format ? this.settings.format : 'json';
+    this.params.url += '?_format=' + format;
 
     // Set basic HTTP auth.
-    this.options.config = function(xhr) {
+    this.params.config = function(xhr) {
       xhr.setRequestHeader('Authorization', '');
     }
 

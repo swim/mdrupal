@@ -11,13 +11,9 @@ var request = (function() {
 
   vm.request = function(request, options) {
     var params = {
-      data: request 
+      data: request,
+      settings: options ? options : {}
     };
-
-    // Merge options into params.
-    if (options) {
-      Object.assign(params, options);
-    }
 
     return new Rest(params).response;
   }
