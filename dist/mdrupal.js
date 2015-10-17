@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mdrupal = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.md = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
  * @file
  * build.js
@@ -22,9 +22,6 @@ module.exports = mdrupal;
  * request.js
  *
  * m.request class wrapper for Drupal requests.
- *
- * @todo, support views; paging etc.
- * @todo, implement another cache system outside of process with settings defined by request.
  */
 
 'use strict';
@@ -39,6 +36,7 @@ var Request = (function () {
 
     this.response = [];
     this.cache = [];
+    this.completed = m.prop(false);
 
     // Default settings
     this.settings = options.settings ? options.settings : {};
@@ -61,42 +59,48 @@ var Request = (function () {
   }, {
     key: 'process',
     value: function process() {
-      var index = this.cacheIndex(this.params.url, this.params.data);
+      this.cacheIndex(this.params.url, this.params.data);
 
-      if (!this.cache[index]) {
-        var completed = m.prop(false);
-        var complete = (function (value) {
-          completed(true);
-
-          delete this.cache[index];
-          return value;
-        }).bind(this);
-
+      if (!this.cache[this.index]) {
         var background = this.params.background ? true : false;
         var timeout = this.settings.redrawTimeout;
 
-        this.cache[index] = {
-          data: m.request(this.params).then(complete, complete).then(function (value) {
+        this.cache[this.index] = {
+          data: m.request(this.params).then(this.success.bind(this), this.error.bind(this)).then(function (response) {
             if (background) {
               // (virtual) DOM renders too quick.
-              // Set minimum wait for redraw time.
+              // Set minimum wait time for redraw.
               setTimeout(function () {
                 m.redraw();
               }, timeout);
             }
 
-            return value;
+            return response;
           }),
-          status: completed
+          status: this.completed
         };
       }
 
-      this.response = this.cache[index];
+      this.response = this.cache[this.index];
+    }
+  }, {
+    key: 'success',
+    value: function success(response) {
+      this.completed(true);
+
+      delete this.cache[this.index];
+      return response;
+    }
+  }, {
+    key: 'error',
+    value: function error(response) {
+      delete this.cache[this.index];
+      return response;
     }
   }, {
     key: 'cacheIndex',
     value: function cacheIndex(url, data) {
-      return JSON.stringify({ url: url, query: data });
+      this.index = JSON.stringify({ url: url, query: data });
     }
   }]);
 
@@ -113,7 +117,7 @@ module.exports = Request;
  * Format request params for Drupal REST to parse.
  *
  * @todo, allow option to set auth type used.
- * @todo, check to ensure config is not already set.
+ * @todo, improve request error handling.
  */
 'use strict';
 
@@ -147,12 +151,49 @@ var Rest = (function (_Request) {
       var format = this.settings.format ? this.settings.format : 'json';
       this.params.url += '?_format=' + format;
 
-      // Set basic HTTP auth.
-      this.params.config = function (xhr) {
-        xhr.setRequestHeader('Authorization', '');
-      };
+      // Set request headers.
+      this.requestHeaders();
 
+      // Handle malformed response.
+      this.requestExtract();
+
+      // Process request.
       _get(Object.getPrototypeOf(Rest.prototype), 'process', this).call(this);
+    }
+  }, {
+    key: 'requestHeaders',
+    value: function requestHeaders() {
+      var headers = this.settings.headers ? this.settings.headers : [];
+
+      if (!this.params.config) {
+        this.params.config = function (xhr) {
+          for (var i = 0; i < headers.length; i++) {
+            xhr.setRequestHeader(headers[i].type, headers[i].value);
+          }
+
+          // Set CSRF token, if available.
+          if (md.user.token()) {
+            xhr.setRequestHeader('X-CSRF-Token', md.user.token());
+          }
+        };
+      }
+    }
+  }, {
+    key: 'requestExtract',
+    value: function requestExtract() {
+      if (!this.params.extract) {
+        this.params.extract = function (xhr, xhrOptions) {
+          try {
+            if (xhr.status == 404) {
+              throw JSON.parse(xhr.response);
+            }
+
+            return xhr.response;
+          } catch (e) {
+            throw new Error(e.message);
+          }
+        };
+      }
     }
   }]);
 
@@ -220,7 +261,7 @@ var request = (function () {
     };
 
     // check for CSRF token; otherwise request one.
-    if (!vm.lock() && !mdrupal.user.token()) {
+    if (!vm.lock() && !md.user.token()) {
       vm.lock(true);
 
       new _classRest2['default']({
@@ -235,7 +276,7 @@ var request = (function () {
             }
 
             // Set CSRF token.
-            return mdrupal.user.token(token);
+            return md.user.token(token);
           }
         },
         settings: {
