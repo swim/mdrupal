@@ -18,7 +18,7 @@ var request = (function() {
     };
 
     // check for CSRF token; otherwise request one.
-    if (!vm.lock() && !mdrupal.user.token()) {
+    if (!vm.lock() && !md.user.token()) {
       vm.lock(true)
 
       new Rest({
@@ -33,7 +33,7 @@ var request = (function() {
             }
 
             // Set CSRF token.
-            return mdrupal.user.token(token);
+            return md.user.token(token);
           }
         },
         settings: {

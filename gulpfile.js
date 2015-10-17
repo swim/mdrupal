@@ -27,7 +27,7 @@ function compile(watch) {
   var bundler = watchify(browserify({
       entries: ['./build.js'],
       debug: true,
-      standalone: 'mdrupal'
+      standalone: 'md'
     }).transform(babel));
 
   function rebundle() {
