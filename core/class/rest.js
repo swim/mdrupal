@@ -15,12 +15,25 @@ class Rest extends Request {
     var format = this.settings.format ? this.settings.format : 'json';
     this.params.url += '?_format=' + format;
 
-    // Set basic HTTP auth.
-    this.params.config = function(xhr) {
-      xhr.setRequestHeader('Authorization', '');
-    }
+    // Set request headers.
+    this.requestHeaders();    
 
+    // Process request.
     super.process();
+  }
+
+  requestHeaders() {
+    var headers = this.settings.headers ? this.settings.headers : [];
+    this.params.config = function(xhr) {
+      for (var i = 0; i < headers.length; i++) {
+        xhr.setRequestHeader(headers[i].type, headers[i].value);
+      }
+
+      // Set CSRF token, if available.
+      if (md.user.token()) {
+        xhr.setRequestHeader('X-CSRF-Token', md.user.token());
+      }
+    }
   }
 }
 
