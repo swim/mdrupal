@@ -9,6 +9,7 @@ class Request {
   constructor(options) {
     this.response = [];
     this.cache = [];
+    this.completed = m.prop(false);
 
     // Default settings
     this.settings = options.settings ? options.settings : {};
@@ -28,41 +29,45 @@ class Request {
   }
 
   process() {
-    var index = this.cacheIndex(this.params.url, this.params.data);
+    this.cacheIndex(this.params.url, this.params.data);
 
-    if (!this.cache[index]) {
-      var completed = m.prop(false)
-      var complete = function(value) {
-        completed(true)
-
-        delete this.cache[index];
-        return value;
-      }.bind(this)
-
+    if (!this.cache[this.index]) {
       var background = this.params.background ? true : false;
       var timeout = this.settings.redrawTimeout;
 
-      this.cache[index] = {
-        data: m.request(this.params).then(complete, complete).then(function(value) {
+      this.cache[this.index] = {
+        data: m.request(this.params).then(this.success.bind(this), this.error.bind(this)).then(function(response) {
           if (background) {
             // (virtual) DOM renders too quick.
-            // Set minimum wait for redraw time.
+            // Set minimum wait time for redraw.
             setTimeout(function() {
               m.redraw()
             }, timeout)
           }
 
-          return value;
+          return response;
         }),
-        status: completed
+        status: this.completed
       };
     }
 
-    this.response = this.cache[index];
+    this.response = this.cache[this.index];
+  }
+
+  success(response) {
+    this.completed(true)
+
+    delete this.cache[this.index];
+    return response;
+  }
+
+  error(response) {
+    delete this.cache[this.index];
+    return response;
   }
 
   cacheIndex(url, data) {
-    return JSON.stringify({url: url, query: data});
+    this.index = JSON.stringify({url: url, query: data});
   }
 }
 
