@@ -17,12 +17,12 @@ Download and include mdrupal.js after mithril.js in your page header, E.G.
 <script src="lib/mdrupal/dist/mdrupal.js"></script>
 ```
 
-###### Examples
+##### Examples
 Request node 1.
 ```
 var response = md.request({
   method: 'GET',
-  url: '/node/22',
+  url: '/node/1',
   background: true
 }, {
   headers: [
