@@ -6,6 +6,13 @@ mDrupal provides a Drupal friendly wrapper for Mithril.js's m.request function. 
  - Drupal 8
  - RESTful Web Services
 
+#### Features
+ - Checks and sets the users CSRF token
+ - Tracks request completion status
+ - Provides a request queue
+ - Provides a request cache
+ - Sets the request format
+
 #### Installation
 For development usage download/clone and run npm install.
 
