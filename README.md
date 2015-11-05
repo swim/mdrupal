@@ -68,7 +68,6 @@ var nodes = md.queue([
 Please see the examples folder for more complete examples.
 
 #### Roadmap
- - Provide abstracted url params, e.g. build url during request.
- - Provide easy entity loading, allows for DRY(er) code; less repeating.
+ - Provide CRUD wrapper? idk.
  - Provide cache outside of the request scope, e.g. not solely for multiple requests. 
  - Provide common render function.
